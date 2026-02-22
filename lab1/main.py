@@ -50,7 +50,8 @@ async def main():
     target_dir = SCRIPT_DIR.parent.parent / 'typst'
     pr_list_path = BUILD_DIR / 'pr_list.json'
     if needs_rebuild(pr_list_path, ()):
-        cmd = ("gh", "pr", "list", "--state", "all", "--limit", "2000", "--json", "number")
+    # if True:
+        cmd = ("gh", "pr", "list", "--state", "all", "--limit", "5000", "--json", "number")
         print(f'{cmd=}')
         process = await asyncio.create_subprocess_exec(*cmd, cwd=target_dir, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         stdout, stderr = await process.communicate()
@@ -85,6 +86,8 @@ async def main():
             for i, pr in pr_batch:
                 tg.create_task(tg_task(i, pr))
         await asyncio.sleep(0.5)
+
+    
 
 if __name__ == '__main__':
     asyncio.run(main())
