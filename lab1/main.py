@@ -239,13 +239,6 @@ async def main():
         assert isinstance(ser_prs, PrBlob)
         ser_prs = typing.cast(PrBlob, ser_prs)
 
-    for ser_pr in ser_prs.prs:
-        if len(ser_pr.labels) > 0:
-            print(ser_pr.labels)
-            # for r in ser_pr.reviews:
-            #     if len(r.reactionGroups) > 0:
-            #         print(r.reactionGroups)
-
 
 if __name__ == '__main__':
     asyncio.run(main())
