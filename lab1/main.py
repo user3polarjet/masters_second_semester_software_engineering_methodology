@@ -13,6 +13,8 @@ import shutil
 import ctypes
 import json
 
+
+
 SCRIPT_PATH = pathlib.Path(os.path.abspath(__file__))
 SCRIPT_DIR = SCRIPT_PATH.parent
 BUILD_DIR = SCRIPT_DIR / 'build'
@@ -88,7 +90,7 @@ class ReviewReactionGroup(typing.NamedTuple):
     def deserialize(cls, data: dict[typing.Any, typing.Any]) -> typing.Self:
         return cls(
             content=data['content'],
-            users=tuple(ReviewReactionGroupUsers(**data['users'])),
+            users=ReviewReactionGroupUsers(**data['users']),
         )
 
 class ReviewAuthor(typing.NamedTuple):
@@ -167,8 +169,6 @@ def deserialize(data: dict[typing.Any, typing.Any]) -> PullRequest:
 class PrBlob(typing.NamedTuple):
     prs: tuple[PullRequest, ...]
 
-
-
 async def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subcommand')
@@ -206,6 +206,7 @@ async def main():
     for pr_batch in itertools.batched(pr_rebuilds, 100):
         async with asyncio.TaskGroup() as tg:
             async def tg_task(number: int, pr_path: pathlib.Path):
+                nonlocal is_pulled_new_prs
                 cmd = ("gh", "pr", "view", str(number), "--json", "number,title,author,additions,deletions,changedFiles,createdAt,mergedAt,closedAt,reviewDecision,comments,commits,reviews,labels")
                 print(f'{cmd=}')
                 process = await asyncio.subprocess.create_subprocess_exec(*cmd, cwd=target_dir, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,)
@@ -238,6 +239,26 @@ async def main():
         ser_prs = pickle.load(fileio)
         assert isinstance(ser_prs, PrBlob)
         ser_prs = typing.cast(PrBlob, ser_prs)
+
+    def analyze_bikeshedding(blob: PrBlob):
+        import numpy as np
+
+        size_list: list[int] = []
+        density_list: list[float] = []
+        
+        for pr in blob.prs:
+            size = pr.additions + pr.deletions
+            if size == 0:
+                continue
+            density = len(pr.comments) / size
+            size_list.append(size)
+            density_list.append(density)
+
+        import matplotlib.pyplot as plt
+        plt.scatter(size_list, density_list)
+        plt.show()
+    
+    analyze_bikeshedding(ser_prs)
 
 
 if __name__ == '__main__':
