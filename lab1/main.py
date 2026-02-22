@@ -48,21 +48,29 @@ async def main():
     
     BUILD_DIR.mkdir(exist_ok=True)
     target_dir = SCRIPT_DIR.parent.parent / 'typst'
-    cmd = ("gh", "pr", "list", "--state", "all", "--limit", "2000", "--json", "number")
-    print(f'{cmd=}')
-    process = await asyncio.create_subprocess_exec(*cmd, cwd=target_dir, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    assert process.returncode == 0
-    stdout = stdout.decode()
-    with open(BUILD_DIR / 'pr_list.json', 'w') as fileio:
-        fileio.write(stdout)
-    pr_list = json.loads(stdout)
+    pr_list_path = BUILD_DIR / 'pr_list.json'
+    if needs_rebuild(pr_list_path, ()):
+        cmd = ("gh", "pr", "list", "--state", "all", "--limit", "2000", "--json", "number")
+        print(f'{cmd=}')
+        process = await asyncio.create_subprocess_exec(*cmd, cwd=target_dir, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await process.communicate()
+        assert process.returncode == 0
+        stdout = stdout.decode()
+        with open(pr_list_path, 'w') as fileio:
+            fileio.write(stdout)
+        pr_list = json.loads(stdout)
+    else:
+        with open(pr_list_path) as fileio:
+            pr_list = json.load(fileio)
 
     import itertools
-    for batch in itertools.batched(enumerate(pr_list), 30):
+    pr_numbers = tuple(int(pr["number"]) for pr in pr_list)
+    pr_paths = tuple(BUILD_DIR / f'pr_view_{number}.json' for number in pr_numbers)
+    pr_rebuilds = ((number, path) for number, path in zip(pr_numbers, pr_paths) if needs_rebuild(path, ()))
+
+    for pr_batch in itertools.batched(pr_rebuilds, 100):
         async with asyncio.TaskGroup() as tg:
-            async def tg_task(i: int, pr: typing.Any):
-                number = pr['number']
+            async def tg_task(number: int, pr_path: pathlib.Path):
                 cmd = ("gh", "pr", "view", str(number), "--json", "number,title,author,additions,deletions,changedFiles,createdAt,mergedAt,closedAt,reviewDecision,comments,commits,reviews,labels")
                 print(f'{cmd=}')
                 process = await asyncio.subprocess.create_subprocess_exec(*cmd, cwd=target_dir, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,)
@@ -71,10 +79,10 @@ async def main():
                     print(f'pr {number} failed with error: {process.returncode}, {stderr.decode()=}')
                 else:
                     stdout = stdout.decode()
-                    with open(BUILD_DIR / f'pr_view_{i}.json', 'w') as fileio:
+                    with open(pr_path, 'w') as fileio:
                         fileio.write(stdout)
 
-            for i, pr in batch:
+            for i, pr in pr_batch:
                 tg.create_task(tg_task(i, pr))
         await asyncio.sleep(0.5)
 
