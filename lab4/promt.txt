@@ -1,0 +1,21 @@
+You are a Senior Software Engineer. I need to simulate a full software development cycle for a "Snake" game using the Python curses library.
+
+Please generate a SINGLE, complete, and executable Python file. Do not output any text outside the Python code block.
+
+Inside this Python file, structure the content exactly as follows:
+
+    At the very top, create a large multi-line string (docstring """ ... """) that serves as the project report. Inside this docstring, include:
+
+        Requirements Engineering: 3 functional and 2 non-functional requirements.
+
+        Deployment: Instructions to run the game and required dependencies.
+
+        Codebase Support: Identify 2 potential bugs specific to curses and how to avoid them.
+
+        Documentation: A mini README with controls.
+
+    Below the docstring, write the complete, executable Game Code using curses. Ensure the terminal state is restored safely if the user exits.
+
+    At the very bottom of the file, include a small section for Testing. Write 2 basic unittest test cases to verify the snake's movement or collision logic (you can mock the curses window or test pure logic classes).
+
+Output ONLY the raw Python code (you can use one ```python block).
